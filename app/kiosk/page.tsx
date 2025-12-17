@@ -45,7 +45,7 @@ export default function KioskPage() {
 
   const [screen, setScreen] = useState<KioskScreen>("capture");
   const [countdownActive, setCountdownActive] = useState(false);
-  const [countdownValue, setCountdownValue] = useState(3);
+  const [countdownValue, setCountdownValue] = useState(10);
   const [adminMode, setAdminMode] = useState(false);
   const [exportPresetId, setExportPresetId] = useState("2r");
   const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
@@ -154,7 +154,7 @@ export default function KioskPage() {
   const startCountdown = () => {
     if (!isStreaming || countdownActive || allFramesFilled) return;
     setCountdownActive(true);
-    setCountdownValue(3);
+    setCountdownValue(10);
   };
 
   useEffect(() => {
@@ -179,7 +179,7 @@ export default function KioskPage() {
         }
       })();
       setCountdownActive(false);
-      setCountdownValue(3);
+      setCountdownValue(10);
     }
   }, [countdownActive, countdownValue, captureLibrary]);
 
@@ -237,7 +237,7 @@ export default function KioskPage() {
       {adminMode && (
         <div className="absolute top-4 left-4 z-50 bg-black/80 backdrop-blur-xl rounded-2xl p-4 border border-white/10 max-w-xs">
           <h3 className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Admin Settings</h3>
-          
+
           {/* Template selector */}
           <div className="mb-4">
             <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Template</p>
@@ -246,11 +246,10 @@ export default function KioskPage() {
                 <button
                   key={t.id}
                   onClick={() => handleTemplateSelect(t.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    t.id === kioskTemplate?.id
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${t.id === kioskTemplate?.id
                       ? "bg-emerald-500 text-white"
                       : "bg-white/10 text-white/70 hover:bg-white/20"
-                  }`}
+                    }`}
                 >
                   {t.name}
                 </button>
@@ -314,17 +313,17 @@ export default function KioskPage() {
       </div>
 
       {/* Attract/Idle overlay */}
-      <KioskAttractOverlay 
-        visible={showAttract && screen === "capture"} 
-        onTap={handleAttractTap} 
+      <KioskAttractOverlay
+        visible={showAttract && screen === "capture"}
+        onTap={handleAttractTap}
       />
 
       {screen === "capture" && kioskTemplate && !showAttract && (
         <div className="h-full flex flex-col items-center justify-center p-6 md:p-10">
           {/* Guidance hints - top */}
           <div className="absolute top-8 left-0 right-0 flex justify-center z-30">
-            <KioskHints 
-              state={hintState} 
+            <KioskHints
+              state={hintState}
               frameNumber={capturedCount + 1}
               totalFrames={totalFrames}
             />
@@ -358,9 +357,9 @@ export default function KioskPage() {
             />
 
             {/* Progress dots */}
-            <KioskProgressDots 
-              total={totalFrames} 
-              filled={capturedCount} 
+            <KioskProgressDots
+              total={totalFrames}
+              filled={capturedCount}
             />
           </div>
         </div>
