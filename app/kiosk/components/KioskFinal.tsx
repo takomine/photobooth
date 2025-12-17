@@ -17,11 +17,11 @@ type KioskFinalProps = {
 
 type UploadState = "idle" | "rendering" | "uploading" | "success" | "error";
 
-export function KioskFinal({ 
-  template, 
-  captures, 
-  onStartOver, 
-  exportWidth, 
+export function KioskFinal({
+  template,
+  captures,
+  onStartOver,
+  exportWidth,
   exportHeight,
   autoResetSeconds = 25,
 }: KioskFinalProps) {
@@ -143,42 +143,50 @@ export function KioskFinal({
             backgroundRepeat: overlayIsBackground && overlay ? "no-repeat" : undefined,
           }}
         >
+          {/* Overlay (PNG/transparent overlays rendered first, frames on top) */}
+          {!overlayIsBackground && overlay ? (
+            <img
+              src={overlay}
+              alt="Overlay"
+              className="pointer-events-none absolute inset-0 w-full h-full object-contain"
+            />
+          ) : null}
+
           {/* Rendered frames */}
           {template.frames.map((frame, idx) => {
             const src = captures[idx] ?? null;
             return (
               <div
                 key={frame.id}
-                className="absolute overflow-hidden"
+                className="absolute"
                 style={{
                   left: `${frame.x * 100}%`,
                   top: `${frame.y * 100}%`,
                   width: `${frame.width * 100}%`,
                   height: `${frame.height * 100}%`,
-                  borderRadius: `${frame.radius ?? 12}px`,
+                  transform: `rotate(${frame.rotation ?? 0}deg)`,
+                  transformOrigin: "center center",
                 }}
               >
-                {src ? (
-                  <img
-                    src={src}
-                    alt={`Capture ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-slate-700" />
-                )}
+                <div
+                  className="relative h-full w-full overflow-hidden"
+                  style={{
+                    borderRadius: `${frame.radius ?? 12}px`,
+                  }}
+                >
+                  {src ? (
+                    <img
+                      src={src}
+                      alt={`Capture ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-slate-700" />
+                  )}
+                </div>
               </div>
             );
           })}
-
-          {/* Overlay (PNG/transparent overlays rendered on top) */}
-          {!overlayIsBackground && overlay ? (
-            <img
-              src={overlay}
-              alt="Overlay"
-              className="pointer-events-none absolute inset-0 w-full h-full object-contain z-10"
-            />
-          ) : null}
         </div>
 
         {/* Success badge */}
@@ -205,40 +213,49 @@ export function KioskFinal({
         }}
         aria-hidden="true"
       >
+        {/* Overlay first, frames on top */}
+        {!overlayIsBackground && overlay ? (
+          <img
+            src={overlay}
+            alt="Overlay"
+            className="pointer-events-none absolute inset-0 w-full h-full object-contain"
+          />
+        ) : null}
+
         {template.frames.map((frame, idx) => {
           const src = captures[idx] ?? null;
           return (
             <div
               key={`export-${frame.id}`}
-              className="absolute overflow-hidden"
+              className="absolute"
               style={{
                 left: `${frame.x * 100}%`,
                 top: `${frame.y * 100}%`,
                 width: `${frame.width * 100}%`,
                 height: `${frame.height * 100}%`,
-                borderRadius: `${frame.radius ?? 12}px`,
+                transform: `rotate(${frame.rotation ?? 0}deg)`,
+                transformOrigin: "center center",
               }}
             >
-              {src ? (
-                <img
-                  src={src}
-                  alt={`Capture ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-slate-700" />
-              )}
+              <div
+                className="relative h-full w-full overflow-hidden"
+                style={{
+                  borderRadius: `${frame.radius ?? 12}px`,
+                }}
+              >
+                {src ? (
+                  <img
+                    src={src}
+                    alt={`Capture ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-slate-700" />
+                )}
+              </div>
             </div>
           );
         })}
-
-        {!overlayIsBackground && overlay ? (
-          <img
-            src={overlay}
-            alt="Overlay"
-            className="pointer-events-none absolute inset-0 w-full h-full object-contain z-10"
-          />
-        ) : null}
       </div>
 
       {/* Right: QR and actions */}
@@ -284,7 +301,7 @@ export function KioskFinal({
                   className="w-64 h-64 md:w-72 md:h-72 lg:w-80 lg:h-80"
                 />
               </div>
-              
+
               {/* Instruction text */}
               <div className="text-center mt-2">
                 <p className="text-white/90 text-lg md:text-xl font-semibold">

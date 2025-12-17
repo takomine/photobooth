@@ -54,10 +54,10 @@ const presetTemplates: Template[] = [
     canvasHeight: 1200,
     bg: "#ffffff",
     frames: [
-      { id: "f1", x: 0.05, y: 0.05, width: 0.45, height: 0.45, radius: 12 },
-      { id: "f2", x: 0.5, y: 0.05, width: 0.45, height: 0.45, radius: 12 },
-      { id: "f3", x: 0.05, y: 0.5, width: 0.45, height: 0.45, radius: 12 },
-      { id: "f4", x: 0.5, y: 0.5, width: 0.45, height: 0.45, radius: 12 },
+      { id: "f1", x: 0.05, y: 0.05, width: 0.45, height: 0.45, radius: 12, rotation: 0 },
+      { id: "f2", x: 0.5, y: 0.05, width: 0.45, height: 0.45, radius: 12, rotation: 0 },
+      { id: "f3", x: 0.05, y: 0.5, width: 0.45, height: 0.45, radius: 12, rotation: 0 },
+      { id: "f4", x: 0.5, y: 0.5, width: 0.45, height: 0.45, radius: 12, rotation: 0 },
     ],
   },
   {
@@ -67,9 +67,9 @@ const presetTemplates: Template[] = [
     canvasHeight: 1600,
     bg: "#f8fafc",
     frames: [
-      { id: "s1", x: 0.08, y: 0.05, width: 0.84, height: 0.28, radius: 16 },
-      { id: "s2", x: 0.08, y: 0.36, width: 0.84, height: 0.28, radius: 16 },
-      { id: "s3", x: 0.08, y: 0.67, width: 0.84, height: 0.28, radius: 16 },
+      { id: "s1", x: 0.08, y: 0.05, width: 0.84, height: 0.28, radius: 16, rotation: 0 },
+      { id: "s2", x: 0.08, y: 0.36, width: 0.84, height: 0.28, radius: 16, rotation: 0 },
+      { id: "s3", x: 0.08, y: 0.67, width: 0.84, height: 0.28, radius: 16, rotation: 0 },
     ],
   },
   {
@@ -79,8 +79,8 @@ const presetTemplates: Template[] = [
     canvasHeight: 1000,
     bg: "#ffffff",
     frames: [
-      { id: "p1", x: 0.06, y: 0.1, width: 0.42, height: 0.8, radius: 18 },
-      { id: "p2", x: 0.52, y: 0.1, width: 0.42, height: 0.8, radius: 18 },
+      { id: "p1", x: 0.06, y: 0.1, width: 0.42, height: 0.8, radius: 18, rotation: 0 },
+      { id: "p2", x: 0.52, y: 0.1, width: 0.42, height: 0.8, radius: 18, rotation: 0 },
     ],
   },
 ];
@@ -200,6 +200,7 @@ export function useTemplates(): UseTemplatesReturn {
         width: 0.3,
         height: 0.3,
         radius: 12,
+        rotation: 0,
         ...frame,
       };
       setTemplates((prev) =>

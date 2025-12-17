@@ -17,14 +17,14 @@ type TemplateEditorProps = {
 type DragState =
   | null
   | {
-      frameId: string;
-      mode: "move" | "resize";
-      handle?: "tl" | "tr" | "bl" | "br";
-      startX: number;
-      startY: number;
-      startFrame: TemplateFrame;
-      bounds: DOMRect;
-    };
+    frameId: string;
+    mode: "move" | "resize";
+    handle?: "tl" | "tr" | "bl" | "br";
+    startX: number;
+    startY: number;
+    startFrame: TemplateFrame;
+    bounds: DOMRect;
+  };
 
 const snapValue = (v: number, step = 0.01) => Math.round(v / step) * step;
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -169,12 +169,13 @@ export function TemplateEditor({
                 top: `${frame.y * 100}%`,
                 width: `${frame.width * 100}%`,
                 height: `${frame.height * 100}%`,
+                transform: `rotate(${frame.rotation ?? 0}deg)`,
+                transformOrigin: "center center",
               }}
             >
               <div
-                className={`relative h-full w-full overflow-hidden border ${
-                  isSelected ? "border-blue-400 ring-2 ring-blue-200" : "border-white/60"
-                } ${editingEnabled ? "cursor-move" : "cursor-default"}`}
+                className={`relative h-full w-full overflow-hidden border ${isSelected ? "border-blue-400 ring-2 ring-blue-200" : "border-white/60"
+                  } ${editingEnabled ? "cursor-move" : "cursor-default"}`}
                 style={{
                   borderRadius: `${frame.radius ?? 12}px`,
                   boxShadow: "0 10px 30px rgba(15,23,42,0.18)",
@@ -211,10 +212,10 @@ export function TemplateEditor({
                             h === "tl"
                               ? "nwse-resize"
                               : h === "tr"
-                              ? "nesw-resize"
-                              : h === "bl"
-                              ? "nesw-resize"
-                              : "nwse-resize",
+                                ? "nesw-resize"
+                                : h === "bl"
+                                  ? "nesw-resize"
+                                  : "nwse-resize",
                         }}
                       />
                     ))}
@@ -247,7 +248,7 @@ export function TemplateEditor({
           {selectedFrame ? (
             <>
               <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
-                Frame radius
+                Radius
               </span>
               <input
                 type="range"
@@ -258,6 +259,19 @@ export function TemplateEditor({
                   onUpdateFrame(selectedFrame.id, { radius: Number(e.target.value) })
                 }
               />
+              <span className="rounded-full bg-blue-100 px-2 py-1 font-semibold text-blue-700">
+                Rotation
+              </span>
+              <input
+                type="range"
+                min={-180}
+                max={180}
+                value={selectedFrame.rotation ?? 0}
+                onChange={(e) =>
+                  onUpdateFrame(selectedFrame.id, { rotation: Number(e.target.value) })
+                }
+              />
+              <span className="text-slate-500">{selectedFrame.rotation ?? 0}°</span>
             </>
           ) : (
             <span className="text-slate-500">Select a frame to tweak radius.</span>
@@ -281,9 +295,8 @@ export function TemplateEditor({
             return (
               <div
                 key={frame.id}
-                className={`flex flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-1 ${
-                  isSel ? "bg-blue-50 text-blue-900" : "bg-slate-50 text-slate-700"
-                }`}
+                className={`flex flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-1 ${isSel ? "bg-blue-50 text-blue-900" : "bg-slate-50 text-slate-700"
+                  }`}
               >
                 <span className="font-semibold">
                   Frame {idx + 1}

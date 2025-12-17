@@ -62,7 +62,7 @@ export function CaptureGrid({
           <img
             src={template.overlay}
             alt="Overlay"
-            className="pointer-events-none absolute inset-0 h-full w-full object-contain z-20"
+            className="pointer-events-none absolute inset-0 h-full w-full object-contain"
           />
         ) : null}
 
@@ -85,54 +85,57 @@ export function CaptureGrid({
           return (
             <div
               key={frame.id}
-              className={`absolute overflow-hidden transition-all duration-300 ${noCard ? "" : "border border-white/60"}`}
+              className="absolute"
               style={{
                 left: `${frame.x * 100}%`,
                 top: `${frame.y * 100}%`,
                 width: `${frame.width * 100}%`,
                 height: `${frame.height * 100}%`,
-                borderRadius: `${frame.radius ?? layout.radius}px`,
-                boxShadow: layout.shadow ? "0 10px 30px rgba(15,23,42,0.2)" : undefined,
-                // Subtle scale-in animation for just-captured frames
-                transform: justCaptured ? "scale(1)" : undefined,
-                animation: justCaptured ? "kiosk-snap 0.3s ease-out" : undefined,
+                transform: `rotate(${frame.rotation ?? 0}deg)`,
+                transformOrigin: "center center",
               }}
             >
-              {src ? (
-                <img 
-                  src={src} 
-                  alt={`Captured ${idx + 1}`} 
-                  className="h-full w-full object-cover"
-                  style={{
-                    // Apply snap animation for newly captured
-                    animation: justCaptured ? "kiosk-snap 0.3s ease-out" : undefined,
-                  }}
-                />
-              ) : isNext && liveStream ? (
-                <VideoInFrame stream={liveStream} />
-              ) : (
-                <div className={placeholderClasses}>
-                  <span 
-                    className={`font-extrabold select-none ${
-                      kioskMode 
-                        ? "text-5xl md:text-6xl lg:text-7xl text-slate-500/80" 
+              <div
+                className={`relative h-full w-full overflow-hidden transition-all duration-300 ${noCard ? "" : "border border-white/60"}`}
+                style={{
+                  borderRadius: `${frame.radius ?? layout.radius}px`,
+                  boxShadow: layout.shadow ? "0 10px 30px rgba(15,23,42,0.2)" : undefined,
+                  animation: justCaptured ? "kiosk-snap 0.3s ease-out" : undefined,
+                }}
+              >
+                {src ? (
+                  <img
+                    src={src}
+                    alt={`Captured ${idx + 1}`}
+                    className="h-full w-full object-cover"
+                    style={{
+                      animation: justCaptured ? "kiosk-snap 0.3s ease-out" : undefined,
+                    }}
+                  />
+                ) : isNext && liveStream ? (
+                  <VideoInFrame stream={liveStream} />
+                ) : (
+                  <div className={placeholderClasses}>
+                    <span
+                      className={`font-extrabold select-none ${kioskMode
+                        ? "text-5xl md:text-6xl lg:text-7xl text-slate-500/80"
                         : "text-6xl md:text-7xl"
-                    }`}
-                  >
-                    {idx + 1}
-                  </span>
-                </div>
-              )}
-              {futureOverlay}
-              {isNext ? (
-                <div 
-                  className={`absolute inset-0 pointer-events-none ${
-                    kioskMode 
-                      ? "ring-4 ring-emerald-400/80 shadow-[inset_0_0_20px_rgba(52,211,153,0.2)]" 
+                        }`}
+                    >
+                      {idx + 1}
+                    </span>
+                  </div>
+                )}
+                {futureOverlay}
+                {isNext ? (
+                  <div
+                    className={`absolute inset-0 pointer-events-none ${kioskMode
+                      ? "ring-4 ring-emerald-400/80 shadow-[inset_0_0_20px_rgba(52,211,153,0.2)]"
                       : "ring-4 ring-emerald-400/60"
-                  }`} 
-                />
-              ) : null}
+                      }`}
+                  />
+                ) : null}
+              </div>
             </div>
           );
         })}
@@ -170,7 +173,7 @@ function VideoInFrame({ stream }: { stream: MediaStream }) {
     if (!v) return;
     if (v.srcObject !== stream) {
       v.srcObject = stream;
-      v.play().catch(() => {});
+      v.play().catch(() => { });
     }
   }, [stream]);
   return (
