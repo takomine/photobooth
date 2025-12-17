@@ -29,7 +29,7 @@ type HintState = "idle" | "camera-init" | "ready" | "countdown" | "captured" | "
 
 // Idle/attract timeouts
 const CAPTURE_IDLE_TIMEOUT = 45000; // 45s on capture screen
-const FINAL_AUTO_RESET_TIMEOUT = 25000; // 25s on final screen
+const FINAL_AUTO_RESET_TIMEOUT = 60000; // 60s on final screen
 
 export default function KioskPage() {
   const {
@@ -45,7 +45,7 @@ export default function KioskPage() {
 
   const [screen, setScreen] = useState<KioskScreen>("capture");
   const [countdownActive, setCountdownActive] = useState(false);
-  const [countdownValue, setCountdownValue] = useState(10);
+  const [countdownValue, setCountdownValue] = useState(5);
   const [adminMode, setAdminMode] = useState(false);
   const [exportPresetId, setExportPresetId] = useState("2r");
   const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
@@ -112,14 +112,7 @@ export default function KioskPage() {
     enabled: screen === "capture" && !showAttract,
   });
 
-  // Auto-reset on final screen
-  useEffect(() => {
-    if (screen !== "final") return;
-    const timer = setTimeout(() => {
-      handleStartOver();
-    }, FINAL_AUTO_RESET_TIMEOUT);
-    return () => clearTimeout(timer);
-  }, [screen]);
+  // Auto-reset on final screen is now handled inside KioskFinal component
 
   // Auto-transition to final screen when all frames are filled
   useEffect(() => {
@@ -154,7 +147,7 @@ export default function KioskPage() {
   const startCountdown = () => {
     if (!isStreaming || countdownActive || allFramesFilled) return;
     setCountdownActive(true);
-    setCountdownValue(10);
+    setCountdownValue(5);
   };
 
   useEffect(() => {
@@ -179,7 +172,7 @@ export default function KioskPage() {
         }
       })();
       setCountdownActive(false);
-      setCountdownValue(10);
+      setCountdownValue(5);
     }
   }, [countdownActive, countdownValue, captureLibrary]);
 
@@ -247,8 +240,8 @@ export default function KioskPage() {
                   key={t.id}
                   onClick={() => handleTemplateSelect(t.id)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${t.id === kioskTemplate?.id
-                      ? "bg-emerald-500 text-white"
-                      : "bg-white/10 text-white/70 hover:bg-white/20"
+                    ? "bg-emerald-500 text-white"
+                    : "bg-white/10 text-white/70 hover:bg-white/20"
                     }`}
                 >
                   {t.name}
@@ -376,9 +369,9 @@ export default function KioskPage() {
         />
       )}
 
-      {/* Countdown overlay */}
+      {/* Countdown overlay with live preview */}
       {countdownActive && (
-        <KioskCountdownOverlay value={countdownValue} />
+        <KioskCountdownOverlay value={countdownValue} getMediaStream={getMediaStream} />
       )}
     </KioskShell>
   );
