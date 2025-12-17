@@ -3,16 +3,7 @@
 import QRCode from "qrcode";
 import { RefObject, useEffect, useState } from "react";
 import { toPng } from "html-to-image";
-
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Download, Printer, Share2, Loader2, X, ExternalLink, Copy, Check } from "lucide-react";
 
 type DownloadPrintProps = {
   printRef: RefObject<HTMLElement | null>;
@@ -28,39 +19,20 @@ export function DownloadPrint({
   disabled,
   exportWidth,
   exportHeight,
-  exportLabel,
-  note,
 }: DownloadPrintProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [shareError, setShareError] = useState<string | null>(null);
-  const [shareStatus, setShareStatus] = useState<string | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [shareLink, setShareLink] = useState<string | null>(null);
-  const [sendStatus, setSendStatus] = useState<string | null>(null);
-  const [sendError, setSendError] = useState<string | null>(null);
   const [sendQr, setSendQr] = useState<string | null>(null);
   const [sendLink, setSendLink] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const hasContent = !disabled;
 
-  const revokeShareLink = () => {
-    if (shareLink) {
-      URL.revokeObjectURL(shareLink);
-      setShareLink(null);
-    }
-  };
-
-  const revokeSendLink = () => {
-    setSendQr(null);
-    setSendLink(null);
-  };
-
   useEffect(() => {
-    return () => revokeShareLink();
-  }, [shareLink]);
-
-  useEffect(() => {
-    return () => revokeSendLink();
+    return () => {
+      setSendQr(null);
+      setSendLink(null);
+    };
   }, []);
 
   const renderToDataUrl = async () => {
@@ -86,7 +58,6 @@ export function DownloadPrint({
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("Download failed", err);
     } finally {
       setIsExporting(false);
@@ -101,54 +72,9 @@ export function DownloadPrint({
   const handleShare = async () => {
     if (!hasContent || isSharing) return;
     setIsSharing(true);
-    setShareError(null);
-    setShareStatus(null);
-    setQrDataUrl(null);
-    revokeShareLink();
-    try {
-      const dataUrl = await renderToDataUrl();
-      const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], "photobooth.png", { type: "image/png" });
-      const nav: typeof navigator & {
-        canShare?: (data: ShareData) => boolean;
-        share?: (data: ShareData) => Promise<void>;
-      } = navigator as any;
-      const canShareFiles = !!nav.canShare && nav.canShare({ files: [file] });
-      if (canShareFiles && nav.share) {
-        await nav.share({ files: [file], title: "Photobooth share" });
-        setShareStatus("Shared via system share sheet.");
-        return;
-      }
-      const url = URL.createObjectURL(blob);
-      setShareLink(url);
-      const qr = await QRCode.toDataURL(url);
-      setQrDataUrl(qr);
-      setShareStatus("Share not supported; scan QR or copy link.");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Share failed";
-      setShareError(message);
-    } finally {
-      setIsSharing(false);
-    }
-  };
-
-  const handleCopyLink = async () => {
-    if (!shareLink || !navigator.clipboard) return;
-    try {
-      await navigator.clipboard.writeText(shareLink);
-      setShareStatus("Link copied. Scan QR or open on mobile.");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Copy failed";
-      setShareError(message);
-    }
-  };
-
-  const handleSendUpload = async () => {
-    if (!hasContent || isSharing) return;
-    setIsSharing(true);
-    setSendStatus(null);
     setSendError(null);
-    revokeSendLink();
+    setSendQr(null);
+    setSendLink(null);
     try {
       const dataUrl = await renderToDataUrl();
       const blob = await (await fetch(dataUrl)).blob();
@@ -163,181 +89,130 @@ export function DownloadPrint({
       }
       const payload = (await res.json()) as { url: string; ttlHours?: number };
       setSendLink(payload.url);
-      const qr = await QRCode.toDataURL(payload.url);
+      const qr = await QRCode.toDataURL(payload.url, { width: 200 });
       setSendQr(qr);
-      setSendStatus(
-        `Link ready. ${
-          payload.ttlHours ? `Expires in ~${payload.ttlHours}h.` : ""
-        }`
-      );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Send upload failed";
+      const message = err instanceof Error ? err.message : "Share failed";
       setSendError(message);
     } finally {
       setIsSharing(false);
     }
   };
 
+  const handleCopy = async () => {
+    if (!sendLink) return;
+    try {
+      await navigator.clipboard.writeText(sendLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Ignore
+    }
+  };
+
+  const handleClose = () => {
+    setSendQr(null);
+    setSendLink(null);
+    setSendError(null);
+  };
+
   return (
-    <Card className="no-print shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div>
-          <CardTitle className="text-base">Export</CardTitle>
-          <CardDescription>Printable, downloadable, and shareable output.</CardDescription>
-        </div>
-        <Badge variant="muted" className="text-[12px]">
-          Ready to share
-        </Badge>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-0">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            onClick={handleDownload}
-            disabled={!hasContent || isExporting}
-          >
-            {isExporting ? "Preparing..." : "Download PNG"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handlePrint}
-            disabled={!hasContent}
-          >
-            Print
-          </Button>
-          <Button
-            type="button"
-            className="bg-amber-600 hover:bg-amber-500"
-            onClick={handleSendUpload}
-            disabled={!hasContent || isSharing}
-          >
-            {isSharing ? "Sharing..." : "Share (link+QR)"}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleShare}
-            disabled={!hasContent || isSharing}
-          >
-            {isSharing ? "Sharing..." : "Share (local/OS)"}
-          </Button>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
-          <span>
-            Export size: {exportLabel} ({exportWidth} × {exportHeight}px)
-            {note ? <span className="ml-1 text-muted-foreground">({note})</span> : null}
-          </span>
-          {!hasContent ? (
-            <Badge variant="warning">Take a photo to enable export.</Badge>
+    <div className="space-y-3">
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={handleDownload}
+          disabled={!hasContent || isExporting}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition"
+        >
+          {isExporting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <Badge variant="success">Content ready</Badge>
+            <Download className="w-4 h-4" />
           )}
+          Download
+        </button>
+
+        <button
+          onClick={handlePrint}
+          disabled={!hasContent}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition"
+        >
+          <Printer className="w-4 h-4" />
+          Print
+        </button>
+
+        <button
+          onClick={handleShare}
+          disabled={!hasContent || isSharing}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/80 hover:bg-amber-500 text-white font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition"
+        >
+          {isSharing ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Share2 className="w-4 h-4" />
+          )}
+          Share
+        </button>
+      </div>
+
+      {/* Error */}
+      {sendError && (
+        <div className="px-3 py-2 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-sm">
+          {sendError}
         </div>
-        {shareStatus ? <p className="text-xs text-emerald-700">{shareStatus}</p> : null}
-        {shareError ? <p className="text-xs text-red-600">{shareError}</p> : null}
-        {sendStatus ? <p className="text-xs text-emerald-700">{sendStatus}</p> : null}
-        {sendError ? <p className="text-xs text-red-600">{sendError}</p> : null}
+      )}
 
-        {qrDataUrl && shareLink ? (
-          <div className="rounded-lg border border-border bg-muted/60 p-3 text-xs text-foreground">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">QR fallback</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setQrDataUrl(null);
-                  setShareStatus(null);
-                  revokeShareLink();
-                }}
-              >
-                Close
-              </Button>
-            </div>
-            <p className="mt-1 text-muted-foreground">
-              Scan with your phone on the same network to download the image.
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <img src={qrDataUrl} alt="Share QR" className="h-32 w-32 rounded bg-white p-2 shadow" />
-              <div className="space-y-2">
-                <div className="break-all rounded border border-border bg-card px-2 py-1 text-[11px]">
-                  {shareLink}
-                </div>
-                <div className="flex gap-2 text-[11px]">
-                  <Button type="button" variant="outline" size="sm" onClick={handleCopyLink}>
-                    Copy link
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(shareLink, "_blank")}
-                  >
-                    Open link
-                  </Button>
-                </div>
+      {/* QR Result */}
+      {sendQr && sendLink && (
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-white font-medium text-sm">Share Link (24h)</span>
+            <button
+              onClick={handleClose}
+              className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-start gap-4">
+            <img
+              src={sendQr}
+              alt="QR Code"
+              className="w-24 h-24 rounded-lg bg-white p-1"
+            />
+            <div className="flex-1 space-y-2">
+              <div className="text-xs text-white/60 break-all font-mono bg-white/5 px-2 py-1.5 rounded border border-white/10">
+                {sendLink}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs font-medium transition"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+                <button
+                  onClick={() => window.open(sendLink, "_blank")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs font-medium transition"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Open
+                </button>
               </div>
             </div>
           </div>
-        ) : null}
+        </div>
+      )}
 
-        {sendQr && sendLink ? (
-          <div className="rounded-lg border border-border bg-muted/60 p-3 text-xs text-foreground">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">Send link (24h)</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  revokeSendLink();
-                  setSendStatus(null);
-                  setSendError(null);
-                }}
-              >
-                Close
-              </Button>
-            </div>
-            <p className="mt-1 text-muted-foreground">Scan or open on your phone to download.</p>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <img src={sendQr} alt="Share link QR" className="h-32 w-32 rounded bg-white p-2 shadow" />
-              <div className="space-y-2">
-                <div className="break-all rounded border border-border bg-card px-2 py-1 text-[11px]">
-                  {sendLink}
-                </div>
-                <div className="flex gap-2 text-[11px]">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(sendLink);
-                        setSendStatus("Link copied.");
-                      } catch (err) {
-                        setSendError(err instanceof Error ? err.message : "Copy failed");
-                      }
-                    }}
-                  >
-                    Copy link
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(sendLink, "_blank")}
-                  >
-                    Open link
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+      {/* No content message */}
+      {!hasContent && (
+        <p className="text-xs text-white/40">
+          Take a photo to enable export options.
+        </p>
+      )}
+    </div>
   );
 }
-

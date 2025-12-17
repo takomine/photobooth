@@ -237,17 +237,17 @@ export function TemplateEditor({
         })}
       </div>
       {editingEnabled ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-white/70">
           <button
             type="button"
             onClick={() => onAddFrame()}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 font-semibold text-white hover:bg-white/20 transition"
           >
-            Add frame
+            + Add frame
           </button>
           {selectedFrame ? (
             <>
-              <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">
+              <span className="rounded-full bg-white/10 px-2 py-1 font-medium text-white/80">
                 Radius
               </span>
               <input
@@ -258,8 +258,9 @@ export function TemplateEditor({
                 onChange={(e) =>
                   onUpdateFrame(selectedFrame.id, { radius: Number(e.target.value) })
                 }
+                className="accent-emerald-500"
               />
-              <span className="rounded-full bg-blue-100 px-2 py-1 font-semibold text-blue-700">
+              <span className="rounded-full bg-emerald-500/20 px-2 py-1 font-medium text-emerald-300">
                 Rotation
               </span>
               <input
@@ -270,45 +271,37 @@ export function TemplateEditor({
                 onChange={(e) =>
                   onUpdateFrame(selectedFrame.id, { rotation: Number(e.target.value) })
                 }
+                className="accent-emerald-500"
               />
-              <span className="text-slate-500">{selectedFrame.rotation ?? 0}°</span>
+              <span className="text-white/60">{selectedFrame.rotation ?? 0}°</span>
             </>
           ) : (
-            <span className="text-slate-500">Select a frame to tweak radius.</span>
+            <span className="text-white/50">Select a frame to adjust properties.</span>
           )}
         </div>
       ) : null}
-      <div className="rounded-xl border border-slate-200 bg-white/90 p-3 text-xs text-slate-700 shadow-sm">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/70">
         <div className="flex items-center justify-between">
-          <span className="font-semibold text-slate-800">Frame metrics</span>
-          <span className="text-[11px] text-slate-500">
-            Canvas: {template.canvasWidth} × {template.canvasHeight}
+          <span className="font-semibold text-white">Frames</span>
+          <span className="text-[11px] text-white/40">
+            Canvas: {template.canvasWidth}×{template.canvasHeight}
           </span>
         </div>
         <div className="mt-2 space-y-1">
           {template.frames.map((frame, idx) => {
-            const xPx = Math.round(frame.x * template.canvasWidth);
-            const yPx = Math.round(frame.y * template.canvasHeight);
-            const wPx = Math.round(frame.width * template.canvasWidth);
-            const hPx = Math.round(frame.height * template.canvasHeight);
             const isSel = frame.id === selectedFrameId;
             return (
               <div
                 key={frame.id}
-                className={`flex flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-1 ${isSel ? "bg-blue-50 text-blue-900" : "bg-slate-50 text-slate-700"
+                className={`flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition ${isSel ? "bg-emerald-500/20 text-emerald-200 border border-emerald-500/30" : "bg-white/5 text-white/60 hover:bg-white/10"
                   }`}
               >
-                <span className="font-semibold">
+                <span className="font-medium">
                   Frame {idx + 1}
-                  {isSel ? " (selected)" : ""}
+                  {isSel && <span className="ml-1 text-xs text-emerald-400">●</span>}
                 </span>
-                <span className="flex flex-wrap gap-2 text-[11px]">
-                  <span>
-                    x {pct(frame.x)}% ({xPx}px) · y {pct(frame.y)}% ({yPx}px)
-                  </span>
-                  <span>
-                    w {pct(frame.width)}% ({wPx}px) · h {pct(frame.height)}% ({hPx}px)
-                  </span>
+                <span className="text-[11px] text-white/40">
+                  {frame.rotation ? `${frame.rotation}° · ` : ""}{Math.round(frame.width * 100)}%×{Math.round(frame.height * 100)}%
                 </span>
               </div>
             );

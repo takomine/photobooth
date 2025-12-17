@@ -37,6 +37,8 @@ type UseTemplatesReturn = {
   removeFrame: (frameId: string) => void;
   setSelectedFrameId: (id: string | null) => void;
   resetToPresets: () => void;
+  exportTemplates: () => void;
+  importTemplates: (file: File) => Promise<void>;
 };
 
 const STORAGE_KEY = "photobooth.templates.v1";
@@ -180,9 +182,9 @@ export function useTemplates(): UseTemplatesReturn {
         prev.map((tpl) =>
           tpl.id === activeTemplateId
             ? {
-                ...tpl,
-                frames: tpl.frames.map((f) => (f.id === frameId ? { ...f, ...partial } : f)),
-              }
+              ...tpl,
+              frames: tpl.frames.map((f) => (f.id === frameId ? { ...f, ...partial } : f)),
+            }
             : tpl
         )
       );
@@ -234,6 +236,45 @@ export function useTemplates(): UseTemplatesReturn {
     setSelectedFrameId(null);
   }, []);
 
+  // Export all templates to a JSON file
+  const exportTemplates = useCallback(() => {
+    const data = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      templates,
+      activeTemplateId,
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `photobooth-templates-${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [templates, activeTemplateId]);
+
+  // Import templates from a JSON file
+  const importTemplates = useCallback(async (file: File) => {
+    const text = await file.text();
+    const data = JSON.parse(text) as {
+      version?: number;
+      templates?: Template[];
+      activeTemplateId?: string | null;
+    };
+    if (!data.templates?.length) {
+      throw new Error("No templates found in file");
+    }
+    // Assign new IDs to avoid conflicts
+    const imported = data.templates.map((tpl) => ({
+      ...tpl,
+      id: uuid(),
+      frames: tpl.frames.map((f) => ({ ...f, id: uuid() })),
+    }));
+    setTemplates((prev) => [...prev, ...imported]);
+    setActiveTemplateId(imported[0].id);
+  }, []);
+
   return {
     templates,
     activeTemplateId,
@@ -249,6 +290,8 @@ export function useTemplates(): UseTemplatesReturn {
     removeFrame,
     setSelectedFrameId,
     resetToPresets,
+    exportTemplates,
+    importTemplates,
   };
 }
 

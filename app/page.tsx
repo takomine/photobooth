@@ -14,11 +14,11 @@ import { Input } from "@/components/ui/input";
 import { CameraFeed } from "./components/CameraFeed";
 import { CaptureGrid } from "./components/CaptureGrid";
 import { DownloadPrint } from "./components/DownloadPrint";
-import { LayoutControls } from "./components/LayoutControls";
 import { TemplateControls } from "./components/TemplateControls";
 import { TemplateEditor } from "./components/TemplateEditor";
 import { usePhotobooth } from "./hooks/usePhotobooth";
 import { useTemplates } from "./hooks/useTemplates";
+import { Settings, Camera, Layout, Download, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
 const exportPresets = [
   { id: "2r", label: "2R (2.5×3.5 in)", width: 750, height: 1050 },
@@ -35,7 +35,6 @@ export default function Home() {
     webcamRef,
     printRef,
     layout,
-    updateLayout,
     captures,
     resetCaptures,
     stopLibrary,
@@ -52,12 +51,13 @@ export default function Home() {
     removeGreen,
     setRemoveGreen,
   } = usePhotobooth();
-  const [controlsHidden, setControlsHidden] = useState(false);
+
   const [useTemplateMode, setUseTemplateMode] = useState(true);
   const [editingEnabled, setEditingEnabled] = useState(true);
-  const [exportPresetId, setExportPresetId] = useState(exportPresets[0].id); // default 2R
+  const [exportPresetId, setExportPresetId] = useState(exportPresets[0].id);
   const [customWidth, setCustomWidth] = useState(1200);
   const [customHeight, setCustomHeight] = useState(1800);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const {
     templates,
@@ -74,6 +74,8 @@ export default function Home() {
     removeFrame,
     setSelectedFrameId,
     resetToPresets,
+    exportTemplates,
+    importTemplates,
   } = useTemplates();
 
   const exportPreset = useMemo(
@@ -84,16 +86,11 @@ export default function Home() {
   const aspectRatio =
     useTemplateMode && activeTemplate
       ? activeTemplate.canvasWidth / activeTemplate.canvasHeight
-      : 2 / 3; // fallback 4x6 ratio
+      : 2 / 3;
   const resolvedExportWidth = useCustom ? customWidth : exportPreset.width;
   const resolvedExportHeight = useCustom
     ? customHeight
     : Math.round(exportPreset.width / aspectRatio);
-  const exportNote = useCustom
-    ? "Custom size"
-    : useTemplateMode && activeTemplate
-    ? "Template aspect ratio applied; height adjusted"
-    : "Preset aspect ratio applied";
 
   const handleCreateBlankTemplate = () =>
     createTemplate({
@@ -110,6 +107,7 @@ export default function Home() {
           width: 0.4,
           height: 0.76,
           radius: 16,
+          rotation: 0,
         },
       ],
     });
@@ -130,196 +128,291 @@ export default function Home() {
   }, [exportPresetId]);
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-slate-100 via-white to-slate-100 text-slate-900">
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10">
-        <Card className="no-print bg-card/90 shadow-sm backdrop-blur">
-          <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Photobooth Studio
-              </p>
-              <CardTitle className="text-3xl md:text-4xl">Simple, customizable capture</CardTitle>
-              <CardDescription className="text-sm md:text-base">
-                Manual shutter, printable/downloadable layouts, fully adjustable grid.
-              </CardDescription>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-900/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600">
+              <Settings className="h-5 w-5 text-white" />
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
-              <Badge variant="muted" className="px-3 py-1 text-[12px]">
-                Shots: {captures.length}
-              </Badge>
-              <Badge variant="muted" className="px-3 py-1 text-[12px]">
-                Layout: {layout.rows}x{layout.cols}
-              </Badge>
+            <div>
+              <h1 className="text-lg font-bold">Photobooth Admin</h1>
+              <p className="text-xs text-white/50">Template & Settings Configuration</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="border-emerald-500/50 bg-emerald-500/10 text-emerald-300">
+              {captures.length} capture{captures.length !== 1 ? "s" : ""}
+            </Badge>
+            {captures.length > 0 && (
               <Button
-                type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                onClick={() => setControlsHidden((v) => !v)}
+                onClick={resetCaptures}
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
               >
-                {controlsHidden ? "Show controls" : "Hide controls"}
+                <Trash2 className="h-4 w-4 mr-1" />
+                Clear
               </Button>
-            </div>
-          </CardHeader>
-        </Card>
+            )}
+            <a
+              href="/kiosk"
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium text-sm hover:from-emerald-400 hover:to-teal-500 transition-all"
+            >
+              Launch Kiosk →
+            </a>
+          </div>
+        </div>
+      </header>
 
-        <div className="grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
-          <section className="space-y-4">
-            <CameraFeed
-              webcamRef={webcamRef}
-              webcamKey={webcamKey}
-              isStreaming={isStreaming}
-              controlsHidden={controlsHidden}
-              stopLibrary={stopLibrary}
-              captureLibrary={captureLibrary}
-              removeGreen={removeGreen}
-              onToggleRemoveGreen={setRemoveGreen}
-              error={error}
-              resolution={resolution}
-              trackInfo={trackInfo}
-              logs={logs}
-              fallbackPath={fallbackPath}
-              constraintLabel={constraintLabel}
-              settingsInfo={settingsInfo}
-            />
-            <Card className="no-print shadow-sm">
-              <CardContent className="flex items-center justify-between gap-3 px-4 py-3 text-sm text-foreground">
-                <p className="text-muted-foreground">
-                  Use the capture button to add frames to the layout.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={resetCaptures}
-                  disabled={!captures.length}
-                >
-                  Clear shots
-                </Button>
+      <main className="mx-auto max-w-7xl px-4 py-6">
+        <div className="grid gap-6 lg:grid-cols-[1fr,400px]">
+          {/* Left Column - Camera & Template Editor */}
+          <div className="space-y-6">
+            {/* Camera Section */}
+            <Card className="border-white/10 bg-white/5 backdrop-blur">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Camera className="h-5 w-5 text-emerald-400" />
+                  <CardTitle className="text-base text-white">Camera Preview</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CameraFeed
+                  webcamRef={webcamRef}
+                  webcamKey={webcamKey}
+                  isStreaming={isStreaming}
+                  controlsHidden={false}
+                  stopLibrary={stopLibrary}
+                  captureLibrary={captureLibrary}
+                  removeGreen={removeGreen}
+                  onToggleRemoveGreen={setRemoveGreen}
+                  error={error}
+                  resolution={resolution}
+                  trackInfo={trackInfo}
+                  logs={logs}
+                  fallbackPath={fallbackPath}
+                  constraintLabel={constraintLabel}
+                  settingsInfo={settingsInfo}
+                />
               </CardContent>
             </Card>
-            <TemplateEditor
-              template={activeTemplate}
-              captures={captures}
-              selectedFrameId={selectedFrameId}
-              onSelectFrame={setSelectedFrameId}
-              onUpdateFrame={updateFrame}
-              onAddFrame={addFrame}
-              onRemoveFrame={removeFrame}
-              editingEnabled={editingEnabled}
-            />
-          </section>
 
-          <section className="space-y-4">
-            <TemplateControls
-              templates={templates}
-              activeTemplateId={activeTemplateId}
-              onSelectTemplate={setActiveTemplateId}
-              onDuplicateTemplate={duplicateTemplate}
-              onDeleteTemplate={deleteTemplate}
-              onCreateBlank={handleCreateBlankTemplate}
-              onResetPresets={resetToPresets}
-              onUpdateActiveMeta={updateTemplateMeta}
-              useTemplate={useTemplateMode}
-              onToggleUseTemplate={setUseTemplateMode}
-              editingEnabled={editingEnabled}
-              onToggleEditing={setEditingEnabled}
-              selectedFrameId={selectedFrameId}
-            />
-            <LayoutControls layout={layout} updateLayout={updateLayout} />
-            <Card className="shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                <div>
-                  <CardTitle className="text-base">Output size</CardTitle>
-                  <CardDescription>Print/download sizing presets</CardDescription>
-                </div>
-                <select
-                  value={exportPreset.id}
-                  onChange={(e) => {
-                    setExportPresetId(e.target.value);
-                  }}
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm shadow-inner"
-                >
-                  {exportPresets.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                {useCustom ? (
-                  <div className="grid grid-cols-2 gap-3 text-sm text-foreground">
-                    <label className="space-y-1">
-                      <span className="text-xs font-semibold uppercase text-muted-foreground">
-                        Width (px)
-                      </span>
-                      <Input
-                        type="number"
-                        min={200}
-                        max={6000}
-                        value={customWidth}
-                        onChange={(e) => setCustomWidth(Number(e.target.value) || 0)}
+            {/* Template Editor Section */}
+            <Card className="border-white/10 bg-white/5 backdrop-blur">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layout className="h-5 w-5 text-emerald-400" />
+                    <CardTitle className="text-base text-white">Template Editor</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-sm text-white/70">
+                      <input
+                        type="checkbox"
+                        checked={editingEnabled}
+                        onChange={(e) => setEditingEnabled(e.target.checked)}
+                        className="rounded border-white/30 bg-white/10"
                       />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs font-semibold uppercase text-muted-foreground">
-                        Height (px)
-                      </span>
-                      <Input
-                        type="number"
-                        min={200}
-                        max={6000}
-                        value={customHeight}
-                        onChange={(e) => setCustomHeight(Number(e.target.value) || 0)}
-                      />
+                      Enable Editing
                     </label>
                   </div>
-                ) : null}
-                <p className="text-xs text-muted-foreground">
-                  Exports to {resolvedExportWidth}×{resolvedExportHeight}px. {exportNote}
-                </p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <TemplateEditor
+                  template={activeTemplate}
+                  captures={captures}
+                  selectedFrameId={selectedFrameId}
+                  onSelectFrame={setSelectedFrameId}
+                  onUpdateFrame={updateFrame}
+                  onAddFrame={addFrame}
+                  onRemoveFrame={removeFrame}
+                  editingEnabled={editingEnabled}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Layout Preview & Download */}
+            <Card className="border-white/10 bg-white/5 backdrop-blur">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Download className="h-5 w-5 text-emerald-400" />
+                    <CardTitle className="text-base text-white">Output Preview</CardTitle>
+                  </div>
+                  <span className="text-xs text-white/50">
+                    {resolvedExportWidth}×{resolvedExportHeight}px
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div
+                  ref={printRef}
+                  className="print-area rounded-lg overflow-hidden"
+                  style={{
+                    width: "100%",
+                    maxWidth: `${resolvedExportWidth}px`,
+                    aspectRatio: `${resolvedExportWidth}/${resolvedExportHeight}`,
+                  }}
+                >
+                  <CaptureGrid
+                    captures={captures}
+                    layout={layout}
+                    template={activeTemplate}
+                    useTemplate={useTemplateMode}
+                  />
+                </div>
                 <DownloadPrint
                   printRef={printRef}
                   disabled={!captures.length}
                   exportWidth={resolvedExportWidth}
                   exportHeight={resolvedExportHeight}
                   exportLabel={exportPreset.label}
-                  note={exportNote}
+                  note=""
                 />
               </CardContent>
             </Card>
-          </section>
-        </div>
-
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Layout preview</h2>
-              <p className="text-sm text-slate-600">
-                This area is used for download/print output.
-              </p>
-            </div>
-            <span className="no-print rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-              Printable & downloadable
-            </span>
           </div>
-          <div
-            ref={printRef}
-            className="print-area"
-            style={{
-              width: "100%",
-              maxWidth: `${resolvedExportWidth}px`,
-              aspectRatio: `${resolvedExportWidth}/${resolvedExportHeight}`,
-            }}
-          >
-            <CaptureGrid
-              captures={captures}
-              layout={layout}
-              template={activeTemplate}
-              useTemplate={useTemplateMode}
-            />
+
+          {/* Right Column - Settings */}
+          <div className="space-y-6">
+            {/* Template Selection */}
+            <Card className="border-white/10 bg-white/5 backdrop-blur">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-white">Templates</CardTitle>
+                <CardDescription className="text-white/50">
+                  Select or manage your photo templates
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TemplateControls
+                  templates={templates}
+                  activeTemplateId={activeTemplateId}
+                  onSelectTemplate={setActiveTemplateId}
+                  onDuplicateTemplate={duplicateTemplate}
+                  onDeleteTemplate={deleteTemplate}
+                  onCreateBlank={handleCreateBlankTemplate}
+                  onResetPresets={resetToPresets}
+                  onUpdateActiveMeta={updateTemplateMeta}
+                  onExportTemplates={exportTemplates}
+                  onImportTemplates={importTemplates}
+                  useTemplate={useTemplateMode}
+                  onToggleUseTemplate={setUseTemplateMode}
+                  editingEnabled={editingEnabled}
+                  onToggleEditing={setEditingEnabled}
+                  selectedFrameId={selectedFrameId}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Export Settings */}
+            <Card className="border-white/10 bg-white/5 backdrop-blur">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-white">Export Size</CardTitle>
+                <CardDescription className="text-white/50">
+                  Output dimensions for print/download
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <select
+                  value={exportPreset.id}
+                  onChange={(e) => setExportPresetId(e.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white backdrop-blur"
+                >
+                  {exportPresets.map((p) => (
+                    <option key={p.id} value={p.id} className="bg-slate-800 text-white">
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+
+                {useCustom && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="space-y-1">
+                      <span className="text-xs text-white/50">Width (px)</span>
+                      <Input
+                        type="number"
+                        min={200}
+                        max={6000}
+                        value={customWidth}
+                        onChange={(e) => setCustomWidth(Number(e.target.value) || 0)}
+                        className="border-white/20 bg-white/10 text-white"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs text-white/50">Height (px)</span>
+                      <Input
+                        type="number"
+                        min={200}
+                        max={6000}
+                        value={customHeight}
+                        onChange={(e) => setCustomHeight(Number(e.target.value) || 0)}
+                        className="border-white/20 bg-white/10 text-white"
+                      />
+                    </label>
+                  </div>
+                )}
+
+                <p className="text-xs text-white/40">
+                  Final output: {resolvedExportWidth}×{resolvedExportHeight}px
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Advanced Settings (Collapsible) */}
+            <Card className="border-white/10 bg-white/5 backdrop-blur">
+              <CardHeader
+                className="pb-3 cursor-pointer hover:bg-white/5 transition-colors rounded-t-lg"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base text-white">Advanced Options</CardTitle>
+                  {showAdvanced ? (
+                    <ChevronUp className="h-5 w-5 text-white/50" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-white/50" />
+                  )}
+                </div>
+              </CardHeader>
+              {showAdvanced && (
+                <CardContent className="space-y-4 border-t border-white/10 pt-4">
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 text-sm text-white/70">
+                      <input
+                        type="checkbox"
+                        checked={useTemplateMode}
+                        onChange={(e) => setUseTemplateMode(e.target.checked)}
+                        className="rounded border-white/30 bg-white/10"
+                      />
+                      Use Template Mode
+                    </label>
+                    <label className="flex items-center gap-3 text-sm text-white/70">
+                      <input
+                        type="checkbox"
+                        checked={removeGreen}
+                        onChange={(e) => setRemoveGreen(e.target.checked)}
+                        className="rounded border-white/30 bg-white/10"
+                      />
+                      Green Screen Removal
+                    </label>
+                  </div>
+                  <div className="pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetToPresets}
+                      className="w-full border-white/20 text-white/70 hover:bg-white/10"
+                    >
+                      Reset Templates to Defaults
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          </div>
         </div>
-        </section>
       </main>
     </div>
   );

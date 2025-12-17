@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Template } from "../hooks/useTemplates";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Copy, Trash2, Plus, RotateCcw, Upload, Download, FolderUp } from "lucide-react";
 
 type TemplateControlsProps = {
   templates: Template[];
@@ -15,6 +13,8 @@ type TemplateControlsProps = {
   onCreateBlank: () => void;
   onResetPresets: () => void;
   onUpdateActiveMeta: (partial: Partial<Omit<Template, "id" | "frames">>) => void;
+  onExportTemplates: () => void;
+  onImportTemplates: (file: File) => Promise<void>;
   useTemplate: boolean;
   onToggleUseTemplate: (v: boolean) => void;
   editingEnabled: boolean;
@@ -31,14 +31,13 @@ export function TemplateControls({
   onCreateBlank,
   onResetPresets,
   onUpdateActiveMeta,
-  useTemplate,
-  onToggleUseTemplate,
-  editingEnabled,
-  onToggleEditing,
-  selectedFrameId,
+  onExportTemplates,
+  onImportTemplates,
 }: TemplateControlsProps) {
   const activeTemplate = templates.find((t) => t.id === activeTemplateId) ?? null;
   const [overlayInfo, setOverlayInfo] = useState<string | null>(null);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const handleLocalOverlay = (file: File | null) => {
     if (!file) return;
@@ -59,139 +58,174 @@ export function TemplateControls({
     reader.readAsDataURL(file);
   };
 
+  const handleImportFile = async (file: File | null) => {
+    if (!file) return;
+    setImportStatus("Importing...");
+    try {
+      await onImportTemplates(file);
+      setImportStatus("Imported successfully!");
+      setTimeout(() => setImportStatus(null), 2000);
+    } catch (err) {
+      setImportStatus(err instanceof Error ? err.message : "Import failed");
+    }
+    if (importInputRef.current) {
+      importInputRef.current.value = "";
+    }
+  };
+
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div>
-          <CardTitle className="text-base">Templates</CardTitle>
-          <CardDescription>Freeform layouts with overlays and frames.</CardDescription>
-        </div>
-        <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-border text-foreground"
-            checked={useTemplate}
-            onChange={(e) => onToggleUseTemplate(e.target.checked)}
-          />
-          Use template mode
+    <div className="space-y-4">
+      {/* Template Selector */}
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+          Active Template
         </label>
-      </CardHeader>
+        <select
+          value={activeTemplateId ?? ""}
+          onChange={(e) => onSelectTemplate(e.target.value || null)}
+          className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+        >
+          {templates.map((tpl) => (
+            <option key={tpl.id} value={tpl.id} className="bg-slate-800 text-white">
+              {tpl.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <CardContent className="space-y-4 pt-0">
-        <div className="flex flex-col gap-2 text-sm">
-          <label className="space-y-1">
-            <span className="text-xs font-semibold uppercase text-muted-foreground">
-              Active template
-            </span>
-            <select
-              value={activeTemplateId ?? ""}
-              onChange={(e) => onSelectTemplate(e.target.value || null)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-inner"
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={onCreateBlank}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs font-medium transition"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          New
+        </button>
+        {activeTemplateId && (
+          <>
+            <button
+              onClick={() => onDuplicateTemplate(activeTemplateId)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs font-medium transition"
             >
-              {templates.map((tpl) => (
-                <option key={tpl.id} value={tpl.id}>
-                  {tpl.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <Button type="button" variant="outline" onClick={onCreateBlank} size="sm">
-              New blank
-            </Button>
-            {activeTemplateId ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onDuplicateTemplate(activeTemplateId)}
-                  size="sm"
-                >
-                  Duplicate
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => onDeleteTemplate(activeTemplateId)}
-                  size="sm"
-                >
-                  Delete
-                </Button>
-              </>
-            ) : null}
-            <Button type="button" variant="secondary" onClick={onResetPresets} size="sm">
-              Reset presets
-            </Button>
-          </div>
-        </div>
+              <Copy className="w-3.5 h-3.5" />
+              Duplicate
+            </button>
+            <button
+              onClick={() => onDeleteTemplate(activeTemplateId)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-medium transition"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete
+            </button>
+          </>
+        )}
+        <button
+          onClick={onResetPresets}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs font-medium transition"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Reset
+        </button>
+      </div>
 
-        {activeTemplate ? (
-          <div className="grid grid-cols-2 gap-3 text-sm text-foreground">
-            <label className="space-y-1">
-              <span className="text-xs font-semibold uppercase text-muted-foreground">Name</span>
-              <Input
-                type="text"
-                value={activeTemplate.name}
-                onChange={(e) => onUpdateActiveMeta({ name: e.target.value })}
-              />
+      {/* Import/Export Buttons */}
+      <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
+        <button
+          onClick={onExportTemplates}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-medium transition"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export All
+        </button>
+        <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-medium transition cursor-pointer">
+          <FolderUp className="w-3.5 h-3.5" />
+          Import
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="sr-only"
+            onChange={(e) => handleImportFile(e.target.files?.[0] ?? null)}
+          />
+        </label>
+        {importStatus && (
+          <span className={`text-xs py-1.5 ${importStatus.includes("success") ? "text-emerald-300" : "text-amber-300"}`}>
+            {importStatus}
+          </span>
+        )}
+      </div>
+
+      {/* Template Settings */}
+      {activeTemplate && (
+        <div className="space-y-3 pt-2 border-t border-white/10">
+          {/* Name */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+              Name
             </label>
-            <label className="space-y-1">
-              <span className="text-xs font-semibold uppercase text-muted-foreground">Background</span>
-              <Input
+            <input
+              type="text"
+              value={activeTemplate.name}
+              onChange={(e) => onUpdateActiveMeta({ name: e.target.value })}
+              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/30 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+            />
+          </div>
+
+          {/* Background Color */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+              Background Color
+            </label>
+            <div className="flex items-center gap-2">
+              <input
                 type="color"
                 value={activeTemplate.bg ?? "#ffffff"}
                 onChange={(e) => onUpdateActiveMeta({ bg: e.target.value })}
-                className="h-10"
+                className="h-10 w-16 rounded-lg border border-white/20 bg-white/10 cursor-pointer"
               />
+              <span className="text-sm text-white/60 font-mono">
+                {activeTemplate.bg ?? "#ffffff"}
+              </span>
+            </div>
+          </div>
+
+          {/* Overlay */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+              Overlay Image
             </label>
-            <label className="space-y-1 col-span-2">
-              <span className="text-xs font-semibold uppercase text-muted-foreground">Overlay image URL</span>
-              <Input
-                type="url"
-                value={activeTemplate.overlay ?? ""}
-                onChange={(e) => onUpdateActiveMeta({ overlay: e.target.value })}
-                placeholder="https://example.com/overlay.png"
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleLocalOverlay(e.target.files?.[0] ?? null)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                <label className="relative inline-flex">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    onChange={(e) => handleLocalOverlay(e.target.files?.[0] ?? null)}
-                  />
-                  <span className="rounded border border-border bg-card px-3 py-1 font-semibold text-foreground shadow-sm hover:bg-muted">
-                    Upload overlay (local)
-                  </span>
-                </label>
-                <span>
-                  {overlayInfo ? overlayInfo : "Uses image file; canvas resizes to its pixels."}
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-white/30 bg-white/5 hover:bg-white/10 transition">
+                <Upload className="w-4 h-4 text-white/50" />
+                <span className="text-sm text-white/70">
+                  {overlayInfo || (activeTemplate.overlay ? "Overlay set" : "Click to upload overlay")}
                 </span>
               </div>
-            </label>
+            </div>
+            {activeTemplate.overlay && (
+              <button
+                onClick={() => onUpdateActiveMeta({ overlay: null })}
+                className="text-xs text-red-400 hover:text-red-300 transition"
+              >
+                Remove overlay
+              </button>
+            )}
           </div>
-        ) : null}
 
-        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/60 px-3 py-2 text-xs text-foreground">
-          <div className="space-y-0.5">
-            <p className="font-semibold">Editor mode</p>
-            <p className="text-muted-foreground">
-              Drag/resize frames directly on the canvas. Selected frame: {selectedFrameId ?? "none"}.
-            </p>
+          {/* Canvas Size Info */}
+          <div className="flex items-center justify-between text-xs text-white/40 pt-2">
+            <span>Canvas: {activeTemplate.canvasWidth}×{activeTemplate.canvasHeight}px</span>
+            <span>{activeTemplate.frames.length} frame{activeTemplate.frames.length !== 1 ? 's' : ''}</span>
           </div>
-          <label className="flex items-center gap-2 font-semibold">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-border text-foreground"
-              checked={editingEnabled}
-              onChange={(e) => onToggleEditing(e.target.checked)}
-            />
-            Editing
-          </label>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }
-
-

@@ -11,6 +11,7 @@ import { KioskCountdownOverlay } from "./components/KioskCountdownOverlay";
 import { KioskFinal } from "./components/KioskFinal";
 import { KioskHints, KioskAttractOverlay } from "./components/KioskHints";
 import { useIdleTimer } from "./hooks/useIdleTimer";
+import { useKioskAudio } from "./hooks/useKioskAudio";
 
 const KIOSK_TEMPLATE_KEY = "photobooth.kiosk.templateId";
 const KIOSK_PRESET_KEY = "photobooth.kiosk.presetId";
@@ -53,6 +54,14 @@ export default function KioskPage() {
   const [hintState, setHintState] = useState<HintState>("idle");
   const [showCapturedHint, setShowCapturedHint] = useState(false);
   const [showAttract, setShowAttract] = useState(true);
+
+  // Audio feedback
+  const { play, playCountdown, preload: preloadAudio } = useKioskAudio();
+
+  // Preload audio on mount
+  useEffect(() => {
+    preloadAudio();
+  }, [preloadAudio]);
 
   // Load stored template ID and preset on mount
   useEffect(() => {
@@ -154,6 +163,10 @@ export default function KioskPage() {
     if (!countdownActive) return;
 
     if (countdownValue > 0) {
+      // Play countdown voice for 5, 4, 3, 2, 1
+      if (countdownValue <= 5) {
+        playCountdown(countdownValue);
+      }
       const timer = setTimeout(() => {
         setCountdownValue((v) => v - 1);
       }, 1000);
@@ -162,11 +175,16 @@ export default function KioskPage() {
       // Countdown finished - capture!
       (async () => {
         try {
-          await new Promise((r) => setTimeout(r, 120));
+          // Play shutter sound prominently
+          play("shutter");
+          await new Promise((r) => setTimeout(r, 200)); // Let shutter sound be heard
           await captureLibrary();
+          // Wait a moment then play "Great shot!"
+          await new Promise((r) => setTimeout(r, 400));
+          play("captured");
           // Show captured confirmation briefly
           setShowCapturedHint(true);
-          setTimeout(() => setShowCapturedHint(false), 600);
+          setTimeout(() => setShowCapturedHint(false), 800);
         } catch (err) {
           console.error("kiosk capture failed", err);
         }
@@ -180,11 +198,22 @@ export default function KioskPage() {
   useEffect(() => {
     if (!autoSequence) return;
     if (countdownActive) return;
-    if (allFramesFilled) return;
+    if (allFramesFilled) {
+      // All photos done - play complete sound after a delay
+      const completeTimer = setTimeout(() => play("complete"), 1500);
+      return () => clearTimeout(completeTimer);
+    }
     if (!isStreaming) return;
-    const timer = setTimeout(() => startCountdown(), 800);
-    return () => clearTimeout(timer);
-  }, [autoSequence, countdownActive, allFramesFilled, isStreaming, captures.length]);
+    // Wait for captured sound to finish, then play "Here comes the next one!"
+    const nextSoundTimer = setTimeout(() => {
+      play("next");
+    }, 1500); // Wait 1.5s after capture for "captured" sound to finish
+    const countdownTimer = setTimeout(() => startCountdown(), 3500); // Start countdown 3.5s after capture
+    return () => {
+      clearTimeout(nextSoundTimer);
+      clearTimeout(countdownTimer);
+    };
+  }, [autoSequence, countdownActive, allFramesFilled, isStreaming, captures.length, play]);
 
   // Start over handler
   const handleStartOver = () => {
@@ -198,6 +227,8 @@ export default function KioskPage() {
   // Handle attract tap
   const handleAttractTap = () => {
     setShowAttract(false);
+    // Play "Let's take some awesome photos!"
+    play("start");
     resetIdleTimer();
     setHintState(isStreaming ? "ready" : "camera-init");
   };
