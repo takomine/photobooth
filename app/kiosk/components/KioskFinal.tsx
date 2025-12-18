@@ -53,11 +53,12 @@ export function KioskFinal({
       try {
         setUploadState("rendering");
 
-        // Render to PNG
+        // Render to PNG with high quality
         const dataUrl = await toPng(exportRef.current, {
           cacheBust: true,
           width: exportWidth,
           height: exportHeight,
+          pixelRatio: 2, // Double resolution for crisp output
           style: {
             transform: "scale(1)",
             transformOrigin: "top left",

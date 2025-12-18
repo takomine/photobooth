@@ -17,12 +17,13 @@ const KIOSK_TEMPLATE_KEY = "photobooth.kiosk.templateId";
 const KIOSK_PRESET_KEY = "photobooth.kiosk.presetId";
 
 const exportPresets = [
-  { id: "2r", label: "2R (2.5×3.5 in)", width: 750, height: 1050 },
-  { id: "3r", label: "3R (3.5×5 in)", width: 1050, height: 1500 },
-  { id: "4r", label: "4R (4×6 in)", width: 1200, height: 1800 },
-  { id: "5r", label: "5R (5×7 in)", width: 1500, height: 2100 },
+  { id: "4k", label: "4K (Ultra HD)", width: 3000, height: 4500 },
+  { id: "hd", label: "Full HD (1920×)", width: 1920, height: 2880 },
   { id: "6r", label: "6R (6×8 in)", width: 1800, height: 2400 },
-  { id: "custom", label: "Custom", width: 1200, height: 1800 },
+  { id: "5r", label: "5R (5×7 in)", width: 1500, height: 2100 },
+  { id: "4r", label: "4R (4×6 in)", width: 1200, height: 1800 },
+  { id: "3r", label: "3R (3.5×5 in)", width: 1050, height: 1500 },
+  { id: "2r", label: "2R (2.5×3.5 in)", width: 750, height: 1050 },
 ];
 
 type KioskScreen = "capture" | "final";
@@ -48,7 +49,7 @@ export default function KioskPage() {
   const [countdownActive, setCountdownActive] = useState(false);
   const [countdownValue, setCountdownValue] = useState(5);
   const [adminMode, setAdminMode] = useState(false);
-  const [exportPresetId, setExportPresetId] = useState("2r");
+  const [exportPresetId, setExportPresetId] = useState("hd");
   const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
   const [autoSequence, setAutoSequence] = useState(false);
   const [hintState, setHintState] = useState<HintState>("idle");
@@ -313,8 +314,8 @@ export default function KioskPage() {
           position: "fixed",
           left: 0,
           top: 0,
-          width: 1280,
-          height: 720,
+          width: 1920,
+          height: 1080,
           opacity: 0.01,
           zIndex: -1,
         }}
@@ -324,14 +325,14 @@ export default function KioskPage() {
           audio={false}
           screenshotFormat="image/png"
           forceScreenshotSourceSize
-          minScreenshotWidth={1280}
-          minScreenshotHeight={720}
+          minScreenshotWidth={1920}
+          minScreenshotHeight={1080}
           videoConstraints={{
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
             facingMode: "user",
           }}
-          style={{ width: 1280, height: 720 }}
+          style={{ width: 1920, height: 1080 }}
           mirrored
         />
       </div>
